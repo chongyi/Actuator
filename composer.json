@@ -1,0 +1,16 @@
+{
+    "name": "chongyi/actuator",
+    "description": "You can use this actuator to perform some system shell command.",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "chongyi",
+            "email": "xpz3847878@163.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Dybasedev\\Actuator\\": "src/"
+        }
+    }
+}
