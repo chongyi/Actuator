@@ -10,6 +10,8 @@
 
 ## 使用
 
+基本示例：
+
 ```php
 use Dybasedev\Actuator\Actuator;
 
@@ -23,5 +25,34 @@ $process = $actuator->createProcess('php -i');
 while (!$process->getPipeManager()[1]->eof()) {
     print $process->getPipeManager()[1]->read(64);
 }
-
 ```
+
+管道的双向读写：
+
+```php
+use Dybasedev\Actuator\Actuator;
+
+$actuator = new Actuator;
+
+$printer = $actuator->createProcess('php -i');
+$grep    = $actuator->createProcess('grep extension');
+
+while (!$process->getPipeManager()[1]->eof()) {
+    // 从管道中读取进程输出的数据，同时向另一个进程的管道写入数据
+    $grep->getPipeManager()[0]->write($process->getPipeManager()[1]->read(64));
+}
+
+// 关闭 grep 进程的写入管道
+$grep->getPipeManager()[0]->close();
+
+// 从 grep 进程管道读取搜索结果
+while (!$grep->getPipeManager()[1]->eof()) {
+    print $grep->getPipeManager()[1]->read(64);
+}
+```
+
+上述例子等同于执行命令 `php -i|grep` 。对于更复杂的管道读写操作可以用更为灵活的方式进行。
+
+## 计划更新
+
+下一步打算利用协程概念实现更为强大的功能，敬请期待。
