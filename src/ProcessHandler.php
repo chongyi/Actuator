@@ -59,7 +59,7 @@ class ProcessHandler
      *
      * @return PipeManager
      */
-    public function getPipeManger()
+    public function getPipeManager()
     {
         return $this->pipeManager;
     }

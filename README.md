@@ -11,7 +11,7 @@
 ## 使用
 
 ```php
-use Dybasedev\Actuator;
+use Dybasedev\Actuator\Actuator;
 
 // 创建执行器实例
 $actuator = new Actuator;
@@ -20,7 +20,7 @@ $actuator = new Actuator;
 $process = $actuator->createProcess('php -i');
 
 // 从管道中读取进程输出的数据
-while (!$process->getPipeManger()[1]->eof()) {
+while (!$process->getPipeManager()[1]->eof()) {
     print $process->getPipeManager()[1]->read(64);
 }
 
