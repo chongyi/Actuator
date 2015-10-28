@@ -21,6 +21,8 @@ class Pipe
         $this->spec = $spec;
 
         $this->pipe =& $pipe;
+
+        stream_set_blocking($this->pipe, 0);
     }
 
     public function read($length)
@@ -28,9 +30,18 @@ class Pipe
         return fread($this->pipe, $length);
     }
 
-    public function readTo($length, callable $callback)
+    public function eof()
     {
+        return feof($this->pipe);
+    }
 
+    public function write($data, $length = null)
+    {
+        if (is_null($length)) {
+            return fwrite($this->pipe, $data);
+        }
+
+        return fwrite($this->pipe, $data, $length);
     }
 
     public function close()

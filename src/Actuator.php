@@ -8,48 +8,83 @@
 
 namespace Dybasedev\Actuator;
 
+use Dybasedev\Actuator\Pipe\PipeManager;
+use SplObjectStorage;
+
 class Actuator
 {
-    protected $processes = [];
+    /**
+     * @var SplObjectStorage
+     */
+    protected $processes;
 
-    public function createProcess($command, array $descriptorSpec)
+    protected $directory;
+
+    public function __construct()
     {
-        $process = proc_open($command, $descriptorSpec, $pipes);
+        $this->processes = new SplObjectStorage();
+    }
+
+    public function createProcess($command, array $descriptorSpec = null, $workDirectory = null)
+    {
+        if (is_null($descriptorSpec)) {
+            $descriptorSpec = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        }
+
+        if (is_null($workDirectory)) {
+            $workDirectory = $this->directory;
+        }
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $workDirectory);
 
         if (is_resource($process)) {
-            $id                   = $this->processIdGenerate();
-            $this->processes[$id] = [$process, $pipes];
+            $pipeManager    = $this->createProcessPipeManger($pipes);
+            $processHandler = $this->createProcessHandler($process, $pipeManager);
+            $pid            = $this->processIdGenerate();
 
-            return $this->createProcessHandler($id);
+            $processHandler->registerEvent('closed', function () use ($processHandler) {
+                $this->processes->detach($processHandler);
+            });
+
+            $this->processes->attach($processHandler, ['pid' => $pid]);
+
+            return $processHandler;
         }
 
         throw new \RuntimeException('Cannot open the process.');
+    }
+
+    public function getWorkDirectory()
+    {
+        return $this->directory;
+    }
+
+    public function setWorkDirectory($directory)
+    {
+        $this->directory = $directory;
+    }
+
+    public function createProcessPipeManger(&$pipes)
+    {
+        return new PipeManager($pipes);
     }
 
     public function processIdGenerate()
     {
         list($micro_sec, $sec) = explode(' ', microtime());
 
-        return (int)(substr($sec, -5) . $micro_sec);
+        return (int)(substr($sec, -5) . $micro_sec . mt_rand(100, 999));
     }
 
-    public function createProcessHandler($id)
+    public function createProcessHandler($process, PipeManager $manager)
     {
-        return new ProcessHandler($this, $id);
+        return new ProcessHandler($process, $manager);
     }
 
-    public function destroyProcess($id)
+    public function destroyProcess(ProcessHandler $process)
     {
-        if (isset($this->processes[$id][1])) {
+        $process->close();
 
-            foreach ($this->processes[$id][1] as $pipe) {
-                fclose($pipe);
-            }
-
-            unset($this->processes[$id][1]);
-        }
-
-        proc_close($this->processes[$id]);
-        unset($this->processes[$id]);
+        $this->processes->detach($process);
     }
 }

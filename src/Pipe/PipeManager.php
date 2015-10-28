@@ -28,6 +28,16 @@ class PipeManager implements ArrayAccess
         }
     }
 
+    /**
+     * @param $spec
+     *
+     * @return Pipe
+     */
+    public function get($spec)
+    {
+        return $this->handler[$spec];
+    }
+
     public function offsetSet($spec, $pipe)
     {
         // Forbidden
@@ -36,7 +46,7 @@ class PipeManager implements ArrayAccess
 
     public function offsetGet($spec)
     {
-        return $this->handler[$spec];
+        return $this->get($spec);
     }
 
     public function offsetUnset($spec)
