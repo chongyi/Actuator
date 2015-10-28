@@ -1,6 +1,6 @@
 {
     "name": "chongyi/actuator",
-    "description": "You can use this actuator to perform some system shell command.",
+    "description": "轻松调用 shell 命令，同时实现双向进程管道的读写操作，以实现更为丰富的进程调用功能。",
     "license": "MIT",
     "authors": [
         {
