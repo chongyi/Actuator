@@ -9,7 +9,9 @@
 namespace Dybasedev\Actuator;
 
 use Dybasedev\Actuator\Pipe\PipeManager;
-use SplObjectStorage;
+use InvalidArgumentException;
+use RuntimeException;
+use Closure;
 
 /**
  * Class Actuator
@@ -22,112 +24,70 @@ use SplObjectStorage;
  */
 class Actuator
 {
-    /**
-     * @var SplObjectStorage $processes 进程对象
-     */
-    protected $processes;
+    protected $makers;
 
-    /**
-     * @var string|null $directory 工作目录
-     */
-    protected $directory;
-
-    public function __construct()
+    public function registerMaker($name, $resource)
     {
-        $this->processes = new SplObjectStorage();
+        $this->makers[$name] = $resource;
     }
 
-    /**
-     * 执行一个 shell 命令（启动一个进程）
-     *
-     * @param string      $command        命令和参数
-     * @param array|null  $descriptorSpec 描述符
-     * @param string|null $workDirectory  工作目录
-     *
-     * @return ProcessHandler
-     */
-    public function createProcess($command, array $descriptorSpec = null, $workDirectory = null)
+    public function play(Performer $performer)
     {
-        if (is_null($descriptorSpec)) {
-            $descriptorSpec = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+        $result = $performer->process()->call(function (PipeManager $pipe) use ($performer) {
+            if ($pipe->stdIn()) {
+                $pipe->stdIn()->write($performer->write());
+                $pipe->stdIn()->close();
+            }
+
+            $response = '';
+
+            if ($pipe->stdOut()) {
+                while (!$pipe->stdOut()->eof()) {
+                    $response .= $pipe->stdOut()->read(1024);
+                }
+
+                $pipe->stdOut()->close();
+            }
+
+            $pipe->destroy();
+
+            return $response;
+        });
+
+        return $performer->format($result);
+    }
+
+    public function call($name)
+    {
+        if (isset($this->makers[$name])) {
+            $maker = $this->makers[$name];
+
+            if ($maker instanceof Process) {
+                return $maker->call();
+            }
+
+            if ($maker instanceof Performer) {
+                return $this->play($maker);
+            }
+
+            if ($maker instanceof Closure) {
+                $response = call_user_func($maker);
+
+                if (!$response instanceof Process) {
+                    return $response->call();
+                }
+
+                return $response;
+            }
+
+            throw new RuntimeException;
         }
 
-        if (is_null($workDirectory)) {
-            $workDirectory = $this->directory;
-        }
-
-        $process = proc_open($command, $descriptorSpec, $pipes, $workDirectory);
-
-        if (is_resource($process)) {
-            $pipeManager    = $this->createProcessPipeManger($pipes);
-            $processHandler = $this->createProcessHandler($process, $pipeManager);
-
-            $processHandler->registerEvent('closed', function () use ($processHandler) {
-                $this->processes->detach($processHandler);
-            });
-
-            $this->processes->attach($processHandler);
-
-            return $processHandler;
-        }
-
-        throw new \RuntimeException('Cannot open the process.');
+        throw new InvalidArgumentException;
     }
 
-    /**
-     * 获取设置的工作目录
-     *
-     * @return null|string 获取设置的工作目录
-     */
-    public function getWorkDirectory()
+    public function let($process)
     {
-        return $this->directory;
-    }
 
-    /**
-     * 设置工作目录（绝对路径）
-     *
-     * @param string $directory 工作目录，该值应当是一个绝对路径
-     */
-    public function setWorkDirectory($directory)
-    {
-        $this->directory = $directory;
-    }
-
-    /**
-     * 创建进程管道管理器
-     *
-     * @param array $pipes
-     *
-     * @return PipeManager
-     */
-    protected function createProcessPipeManger(array &$pipes)
-    {
-        return new PipeManager($pipes);
-    }
-
-    /**
-     * 创建进程资源管理器
-     *
-     * @param resource $process
-     * @param PipeManager $manager
-     *
-     * @return ProcessHandler
-     */
-    protected function createProcessHandler(&$process, PipeManager $manager)
-    {
-        return new ProcessHandler($process, $manager);
-    }
-
-    /**
-     * 销毁执行的进程
-     *
-     * @param ProcessHandler $process
-     */
-    public function destroyProcess(ProcessHandler $process)
-    {
-        $process->close();
-
-        $this->processes->detach($process);
     }
 }
