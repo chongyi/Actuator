@@ -62,6 +62,23 @@ class Pipe
     }
 
     /**
+     * 获取管道资源流中的内容
+     *
+     * @param int|null $length
+     * @param int|null $offset
+     *
+     * @return string
+     */
+    public function getContent()
+    {
+        $args = func_get_args();
+
+        array_unshift($args, $this->pipe);
+
+        return call_user_func_array('stream_get_contents', $args);
+    }
+
+    /**
      * 检测是否读到了尾部
      *
      * @return bool
