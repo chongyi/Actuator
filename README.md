@@ -37,9 +37,9 @@ $actuator = new Actuator;
 $printer = $actuator->createProcess('php -i');
 $grep    = $actuator->createProcess('grep extension');
 
-while (!$process->getPipeManager()[1]->eof()) {
+while (!$printer->getPipeManager()[1]->eof()) {
     // 从管道中读取进程输出的数据，同时向另一个进程的管道写入数据
-    $grep->getPipeManager()[0]->write($process->getPipeManager()[1]->read(64));
+    $grep->getPipeManager()[0]->write($printer->getPipeManager()[1]->read(64));
 }
 
 // 关闭 grep 进程的写入管道

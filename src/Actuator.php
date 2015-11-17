@@ -9,6 +9,7 @@
 namespace Dybasedev\Actuator;
 
 use Dybasedev\Actuator\Pipe\PipeManager;
+use Dybasedev\Actuator\Pipe\PipeOperator;
 use InvalidArgumentException;
 use RuntimeException;
 use Closure;
@@ -24,13 +25,26 @@ use Closure;
  */
 class Actuator
 {
-    protected $makers;
+    protected $actuators;
 
-    public function registerMaker($name, $resource)
+    /**
+     * 添加一个可执行组件
+     *
+     * @param string $name
+     * @param Process|Performer $actuator
+     */
+    public function addPerformer($name, $actuator)
     {
-        $this->makers[$name] = $resource;
+        $this->actuators[$name] = $actuator;
     }
 
+    /**
+     * 指定一个执行者运作
+     *
+     * @param Performer $performer
+     *
+     * @return mixed
+     */
     public function play(Performer $performer)
     {
         $result = $performer->process()->call(function (PipeManager $pipe) use ($performer) {
@@ -57,21 +71,28 @@ class Actuator
         return $performer->format($result);
     }
 
+    /**
+     * 调用一个执行器组件
+     *
+     * @param $name
+     *
+     * @return mixed
+     */
     public function call($name)
     {
-        if (isset($this->makers[$name])) {
-            $maker = $this->makers[$name];
+        if (isset($this->actuators[$name])) {
+            $actuator = $this->actuators[$name];
 
-            if ($maker instanceof Process) {
-                return $maker->call();
+            if ($actuator instanceof Process) {
+                return $actuator->call();
             }
 
-            if ($maker instanceof Performer) {
-                return $this->play($maker);
+            if ($actuator instanceof Performer) {
+                return $this->play($actuator);
             }
 
-            if ($maker instanceof Closure) {
-                $response = call_user_func($maker);
+            if ($actuator instanceof Closure) {
+                $response = call_user_func($actuator);
 
                 if (!$response instanceof Process) {
                     return $response->call();
@@ -88,6 +109,41 @@ class Actuator
 
     public function let($process)
     {
+        if ($process instanceof Process) {
+            if (!$process->executing()) {
+                $process = clone $process;
+            }
 
+            $process->execute();
+
+            return $this->newPipeOperator($process);
+        }
+
+        if ($process instanceof Performer) {
+            $new = $process->process();
+
+            $new->execute();
+
+            if ($new->pipes()->stdIn()) {
+                $new->pipes()->stdIn()->write($process->write());
+            }
+
+            return $this->newPipeOperator($new);
+        }
+
+        if (is_string($process)) {
+            if (isset($this->actuators[$process])) {
+                return $this->let($this->actuators[$process]);
+            }
+        }
+
+        throw new InvalidArgumentException;
+    }
+
+    public function newPipeOperator(Process $process)
+    {
+        $operator = new PipeOperator($this);
+
+        return $operator->start($process);
     }
 }

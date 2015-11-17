@@ -116,6 +116,11 @@ class Pipe
         }
     }
 
+    /**
+     * 是否可读
+     *
+     * @return bool
+     */
     public function readable()
     {
         if ($this->spec == 1 || $this->spec == 2) {
@@ -125,6 +130,11 @@ class Pipe
         return false;
     }
 
+    /**
+     * 是否可写
+     *
+     * @return bool
+     */
     public function writeable()
     {
         if ($this->spec == 0) {

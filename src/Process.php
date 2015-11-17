@@ -188,6 +188,16 @@ class Process implements ArrayAccess
     }
 
     /**
+     * 判断是否属于执行的进程对象
+     *
+     * @return bool
+     */
+    public function executing()
+    {
+        return $this->executing;
+    }
+
+    /**
      * @return PipeManager
      */
     public function pipes()
