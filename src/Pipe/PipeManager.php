@@ -47,6 +47,16 @@ class PipeManager implements ArrayAccess
     }
 
     /**
+     * 销毁
+     */
+    public function destroy()
+    {
+        foreach ($this->handlers as $pipe) {
+            $pipe->close();
+        }
+    }
+
+    /**
      * 取的管道对象
      *
      * @param $spec
@@ -107,5 +117,37 @@ class PipeManager implements ArrayAccess
     public function offsetExists($spec)
     {
         return isset($this->handlers[$spec]);
+    }
+
+    /**
+     * @return Pipe|null
+     */
+    public function stdIn()
+    {
+        return isset($this[0]) ? $this[0] : null;
+    }
+
+    /**
+     * @return Pipe|null
+     */
+    public function stdOut()
+    {
+        return isset($this[1]) ? $this[1] : null;
+    }
+
+    /**
+     * @return Pipe|null
+     */
+    public function stdError()
+    {
+        return isset($this[2]) ? $this[2] : null;
+    }
+
+    /**
+     * 析构函数
+     */
+    public function __destruct()
+    {
+        $this->destroy();
     }
 }

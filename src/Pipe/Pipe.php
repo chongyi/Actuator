@@ -32,7 +32,7 @@ class Pipe
     /**
      * @var bool 用于标识当前资源是否可被释放
      */
-    protected $available = true;
+    private $available = true;
 
     /**
      * 构造函数
@@ -114,6 +114,24 @@ class Pipe
             fclose($this->pipe);
             $this->available = false;
         }
+    }
+
+    public function readable()
+    {
+        if ($this->spec == 1 || $this->spec == 2) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function writeable()
+    {
+        if ($this->spec == 0) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
